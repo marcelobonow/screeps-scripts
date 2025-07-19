@@ -18,7 +18,7 @@ declare global {
   interface CreepMemory {
     role: Roles;
     need_renew:boolean;
-    upgrading: boolean;
+    transferring: boolean;
   }
 
 

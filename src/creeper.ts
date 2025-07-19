@@ -1,6 +1,8 @@
 import { Roles } from "./constants";
 
 const ticksToRenew = 300;
+const ticksToRenewUrgently = 200;
+const spawnMinFreeCapacityOverhead = 10;
 
 export function creepLoop(creep: Creep) {
   if (creep.memory.need_renew && totalEnergyStored() > 200) {
@@ -8,7 +10,7 @@ export function creepLoop(creep: Creep) {
     creep.moveTo(Game.spawns["Spawn1"]);
     return;
   }
-  else if (totalEnergyStored() < 200) {
+  else if (creep.memory.need_renew && totalEnergyStored() < 200) {
     creep.say("Não tem energia pra renovar!");
   }
 
@@ -20,22 +22,23 @@ export function creepLoop(creep: Creep) {
 }
 
 function harvesterLoop(creep: Creep) {
-  if (creep.store.getFreeCapacity() > 0 && !creep.memory.upgrading)
+  if (creep.store.getFreeCapacity() > 0 && !creep.memory.transferring)
     getEnergy(creep);
   else
     sendEnergyBack(creep);
 }
 
 function upgraderLoop(creep: Creep) {
-  if (totalEnergyStored() < 200)
-    return;
 
-  if (!creep.memory.upgrading && (creep.ticksToLive ?? 0) <= ticksToRenew) {
+  if (!creep.memory.transferring && (creep.ticksToLive ?? 0) <= ticksToRenewUrgently) {
     creep.say("Precisa renovar!");
     creep.memory.need_renew = true;
   }
 
-  if (creep.store.getFreeCapacity() > 0 && !creep.memory.upgrading) {
+  if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0)
+    creep.memory.transferring = false;
+
+  if (creep.store.getFreeCapacity() > 0 && !creep.memory.transferring) {
     getEnergy(creep);
     return;
   }
@@ -51,12 +54,14 @@ function upgraderLoop(creep: Creep) {
 }
 
 function buildTarget(creep: Creep, build: ConstructionSite<BuildableStructureConstant>) {
+  creep.memory.transferring = true;
   if (creep.build(build) == ERR_NOT_IN_RANGE)
     creep.moveTo(build);
 }
 
 function upgradeController(creep: Creep) {
   const controller = creep.room.controller;
+  creep.memory.transferring = true;
   if (controller && creep.upgradeController(controller) == ERR_NOT_IN_RANGE)
     creep.moveTo(controller);
 }
@@ -72,23 +77,27 @@ function getEnergy(creep: Creep) {
 }
 
 function sendEnergyBack(creep: Creep) {
-  //TODO: Fazer prioridade de energia
-  var target: any = Game.spawns["Spawn1"];
-  if (target.store.getFreeCapacity(RESOURCE_ENERGY) <= 0) {
+  //Se tiver prestes a morrer, vai se renovar primeiro; mas deveria ser o limiar com menos ticks restantes
+  if (creep.ticksToLive && creep.ticksToLive <= ticksToRenew) {
+    creep.memory.need_renew = true;
+    return;
+  }
+
+  creep.memory.transferring = true;
+  let target: any = Game.spawns["Spawn1"];
+  if (creep.store[RESOURCE_ENERGY] >= (target.store.getFreeCapacity(RESOURCE_ENERGY) + spawnMinFreeCapacityOverhead)) {
     target = target.room.controller;
-    creep.memory.upgrading = true;
   }
-  if (creep.transfer(target, RESOURCE_ENERGY, creep.store.getCapacity()) == ERR_NOT_IN_RANGE)
+
+  const transferResult = creep.transfer(target, RESOURCE_ENERGY, creep.store[RESOURCE_ENERGY]);
+
+  if (transferResult == ERR_NOT_IN_RANGE)
     creep.moveTo(target);
-  else {
-    console.log("AQUI!: " + creep.transfer(target, RESOURCE_ENERGY, creep.store.getCapacity()));
-    if ((creep.ticksToLive ?? 0) <= ticksToRenew) {
-      creep.say("Precisa renovar!");
-      creep.memory.need_renew = true;
-    }
-  }
+  else if (transferResult != 0)
+    console.log("Erro transferindo: " + transferResult);
+
   if (creep.store.getUsedCapacity(RESOURCE_ENERGY) == 0)
-    creep.memory.upgrading = false;
+    creep.memory.transferring = false;
 }
 
 function totalEnergyStored() {
