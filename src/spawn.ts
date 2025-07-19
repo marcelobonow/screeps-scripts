@@ -8,14 +8,22 @@ const MAX_UPGRADERS = 2;
 
 export function spawnLoop(spawn: StructureSpawn) {
   //Verifica se algum creep esta precisando de reparo;
+
   for (const creepName in Game.creeps) {
     const creep = Game.creeps[creepName];
     if (creep.memory.need_renew && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > MIN_ENERGY_TO_RENEW) {
-      creep.say("Renovando creep");
-      if (spawn.renewCreep(creep) == 0) {
-        if ((creep.ticksToLive ?? 0) >= MAX_TICKS_TO_RENEW) creep.memory.need_renew = false;
+      creep.say("sendo renovado");
+      const renewResult = spawn.renewCreep(creep);
+      if ((creep.ticksToLive ?? 0) >= MAX_TICKS_TO_RENEW) creep.memory.need_renew = false;
+      if (renewResult == 0) {
         return;
-      } else break;
+      } else {
+        console.log("Erro renovando: " + renewResult);
+        if (renewResult == ERR_FULL) {
+          creep.memory.need_renew = false;
+          continue;
+        } else break;
+      }
     }
   }
 
@@ -41,20 +49,17 @@ function verifyAndSpawnHarvester(spawn: StructureSpawn) {
     if (creep.memory.role == Roles.HARVESTER) {
       harvesters++;
       const harvesterId = getIdFromString(creep.name, harvesterPrefix);
-      console.log("creep:" + creep.name + ".harvesterId: " + creep.name.split(harvesterPrefix));
-      if (harvesterId > latestHarvesterId)
-        latestHarvesterId = harvesterId;
+      if (harvesterId > latestHarvesterId) latestHarvesterId = harvesterId;
 
       if (harvesters >= MAX_HARVESTERS) {
         return false;
       }
     }
   }
-  console.log("Latest harvester: " + latestHarvesterId);
   const harvesterName = harvesterPrefix + (latestHarvesterId + 1);
   spawn.room.visual.text("Spawnando " + harvesterName + "...", 30, 30);
   const spawnResult = spawn.spawnCreep(getHarvesterPartsToSpawn(spawn), harvesterName, {
-    memory: { role: Roles.HARVESTER, need_renew: false, transferring: false, }
+    memory: { role: Roles.HARVESTER, need_renew: false, transferring: false }
   });
   if (spawnResult == ERR_NAME_EXISTS) {
     spawn.room.visual.text("ERRO! HARVESTER NOME COLISÃO!", 0, 30);
@@ -85,8 +90,7 @@ function verifyAndSpawnUpgrader(spawn: StructureSpawn) {
     if (creep.memory.role == Roles.UPGRADER) {
       upgraders++;
       const upgraderId = getIdFromString(creep.name, upgraderPrefix);
-      if (upgraderId > latestUpgrader)
-        latestUpgrader = upgraderId;
+      if (upgraderId > latestUpgrader) latestUpgrader = upgraderId;
 
       if (upgraders >= MAX_UPGRADERS) {
         return false;

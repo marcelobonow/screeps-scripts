@@ -6,7 +6,7 @@ const spawnMinFreeCapacityOverhead = 10;
 
 export function creepLoop(creep: Creep) {
   if (creep.memory.need_renew && totalEnergyStored() > 200) {
-    creep.say("indo renovar!");
+    console.log("creeper movendo para renovar");
     creep.moveTo(Game.spawns["Spawn1"]);
     return;
   }
@@ -22,6 +22,9 @@ export function creepLoop(creep: Creep) {
 }
 
 function harvesterLoop(creep: Creep) {
+  if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0)
+    creep.memory.transferring = false;
+
   if (creep.store.getFreeCapacity() > 0 && !creep.memory.transferring)
     getEnergy(creep);
   else
@@ -35,7 +38,7 @@ function upgraderLoop(creep: Creep) {
     creep.memory.need_renew = true;
   }
 
-  if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0)
+  if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0)
     creep.memory.transferring = false;
 
   if (creep.store.getFreeCapacity() > 0 && !creep.memory.transferring) {
@@ -84,20 +87,36 @@ function sendEnergyBack(creep: Creep) {
   }
 
   creep.memory.transferring = true;
-  let target: any = Game.spawns["Spawn1"];
-  if (creep.store[RESOURCE_ENERGY] >= (target.store.getFreeCapacity(RESOURCE_ENERGY) + spawnMinFreeCapacityOverhead)) {
-    target = target.room.controller;
+  let workResult = 0;
+  ///TODO: pegar o spawn que mais precisa, não fixar me um só
+  const spawn = Game.spawns["Spawn1"];
+  let target;
+  if (creep.store[RESOURCE_ENERGY] < (spawn.store.getFreeCapacity(RESOURCE_ENERGY) - spawnMinFreeCapacityOverhead)) {
+    workResult = creep.transfer(spawn, RESOURCE_ENERGY, creep.store[RESOURCE_ENERGY]);
+    target = spawn;
+  }
+  else if ((creep.room.controller?.level ?? 0) < 2 || Object.values(Game.constructionSites).length <= 0) {
+    if (!creep.room.controller) {
+      console.log("Creeper deveria fazer upgrade no controller mas não tem");
+      return
+    }
+    workResult = creep.upgradeController(creep.room.controller);
+    target = creep.room.controller;
+  }
+  else {
+    ///TODO: Usar preferencia nas construções
+    const constructionSite = Object.values(Game.constructionSites)[0];
+    workResult = creep.build(constructionSite);
+    target = constructionSite;
   }
 
-  const transferResult = creep.transfer(target, RESOURCE_ENERGY, creep.store[RESOURCE_ENERGY]);
 
-  if (transferResult == ERR_NOT_IN_RANGE)
+  if (workResult == ERR_NOT_IN_RANGE)
     creep.moveTo(target);
-  else if (transferResult != 0)
-    console.log("Erro transferindo: " + transferResult);
+  else if (workResult != 0) {
+    console.log(creep.name + " erro trabalhando: " + workResult + ". Tentou transferir " + creep.store[RESOURCE_ENERGY] + ". target " + target);
+  }
 
-  if (creep.store.getUsedCapacity(RESOURCE_ENERGY) == 0)
-    creep.memory.transferring = false;
 }
 
 function totalEnergyStored() {
