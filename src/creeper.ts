@@ -1,3 +1,4 @@
+import { collectorLoop } from "./collector";
 import { Roles } from "./constants";
 import { getExtensionWithSpace } from "./extensions";
 
@@ -19,6 +20,8 @@ export function creepLoop(creep: Creep) {
 
   if (creep.memory.role == Roles.HARVESTER)
     harvesterLoop(creep);
+  if(creep.memory.role == Roles.COLLECTOR)
+    collectorLoop(creep);
   else if (creep.memory.role == Roles.UPGRADER)
     upgraderLoop(creep);
 }

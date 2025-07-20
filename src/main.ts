@@ -19,6 +19,7 @@ declare global {
     role: Roles;
     need_renew:boolean;
     transferring: boolean;
+    manual: boolean;
   }
 
 

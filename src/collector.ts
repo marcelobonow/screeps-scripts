@@ -1,0 +1,49 @@
+import { collectorMinEnergyInRoomToRenew } from "./constants";
+
+export function collectorLoop(creep: Creep) {
+  if (creep.memory.need_renew && creep.room.energyAvailable > collectorMinEnergyInRoomToRenew) {
+    creep.moveTo(Game.spawns["Spawn1"]);
+    return;
+  }
+
+  if (creep.memory.manual)
+    return;
+
+  if (creep.store.getFreeCapacity() > 0) {
+    getEnergy(creep);
+  }
+  else
+    storeEnergy(creep);
+
+}
+
+function getEnergy(creep: Creep) {
+  ///TODO: colocar opção de vincular um collector e um target, em vez de só pegar do mais proximo
+  const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+  if (!source) {
+    creep.say("sem source!");
+    return;
+  }
+  if (creep.harvest(source) == ERR_NOT_IN_RANGE)
+    creep.moveTo(source);
+}
+
+function storeEnergy(creep: Creep) {
+  const closestContainer = creep.pos.findClosestByRange<StructureContainer>(FIND_STRUCTURES, {
+    filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0
+  });
+  let workResult;
+  let target: StructureContainer | StructureSpawn | null = closestContainer;
+  if (closestContainer != null) {
+    const transfer = Math.min(creep.store.energy, closestContainer.store.getFreeCapacity());
+    workResult = creep.transfer(closestContainer, RESOURCE_ENERGY, transfer);
+  }
+  else {
+    const spawn = Game.spawns["Spawn1"];
+    const transfer = Math.min(creep.store.energy, spawn?.store?.getFreeCapacity() ?? 0);
+    workResult = creep.transfer(spawn, RESOURCE_ENERGY, transfer);
+    target = spawn;
+  }
+  if (workResult == ERR_NOT_IN_RANGE && target)
+    creep.moveTo(target);
+}
