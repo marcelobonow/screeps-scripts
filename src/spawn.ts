@@ -1,8 +1,9 @@
 import { harvesterPrefix, Roles, upgraderPrefix } from "./constants";
+import { getExtensionEnergyInRoom } from "./extensions";
 
 const MIN_ENERGY_TO_RENEW = 50;
 const MAX_TICKS_TO_RENEW = 1200;
-const MIN_ENERGY_TO_SPAWN_HARVESTER = 300;
+const MIN_ENERGY_TO_SPAWN_HARVESTER = 450;
 const MAX_HARVESTERS = 4;
 const MAX_UPGRADERS = 2;
 
@@ -22,7 +23,7 @@ export function spawnLoop(spawn: StructureSpawn) {
           creep.memory.need_renew = false;
           continue;
         }
-        else if(renewResult == ERR_NOT_IN_RANGE)
+        else if (renewResult == ERR_NOT_IN_RANGE)
           continue;
         else {
           console.log("Erro renovando: " + renewResult);
@@ -40,7 +41,7 @@ export function spawnLoop(spawn: StructureSpawn) {
 
 //Retorna se spawnou algum
 function verifyAndSpawnHarvester(spawn: StructureSpawn) {
-  if (spawn.store[RESOURCE_ENERGY] < MIN_ENERGY_TO_SPAWN_HARVESTER) {
+  if (getEnergyAvailable(spawn) < MIN_ENERGY_TO_SPAWN_HARVESTER) {
     return;
   }
   if (spawn.spawning) {
@@ -104,7 +105,8 @@ function verifyAndSpawnUpgrader(spawn: StructureSpawn) {
   }
   const upgraderName = upgraderPrefix + (latestUpgrader + 1);
   spawn.room.visual.text("Spawnando " + upgraderName + "...", 30, 30);
-  const spawnResult = spawn.spawnCreep([WORK, CARRY, CARRY, MOVE], upgraderName, {
+  ///TODO: Pegar partes separadas para upgrader
+  const spawnResult = spawn.spawnCreep(getHarvesterPartsToSpawn(spawn), upgraderName, {
     memory: { role: Roles.UPGRADER, need_renew: false, transferring: false }
   });
 
@@ -127,6 +129,14 @@ function getIdFromString(name: string, prefix: string): number {
 
 function getHarvesterPartsToSpawn(spawn: StructureSpawn) {
   //quanto mais harvesters tiver, mais partes coloca, e quanto mais partes os mais velhos tiver, mais partes colocar;
-  if (spawn.store[RESOURCE_ENERGY] > 350) return [WORK, WORK, CARRY, CARRY, MOVE];
+  const energyAvailable = getEnergyAvailable(spawn);
+  if (energyAvailable >= 500) return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+  else if (energyAvailable >= 450) return [WORK, WORK, WORK, CARRY, CARRY, MOVE];
+  else if (energyAvailable >= 350) return [WORK, WORK, CARRY, CARRY, MOVE];
+  else if (energyAvailable >= 300) return [WORK, WORK, CARRY, MOVE];
   else return [WORK, CARRY, MOVE];
+}
+
+function getEnergyAvailable(spawn: StructureSpawn) {
+  return spawn.store[RESOURCE_ENERGY] + getExtensionEnergyInRoom(spawn.room);
 }
