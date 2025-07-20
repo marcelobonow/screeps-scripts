@@ -18,11 +18,16 @@ export function spawnLoop(spawn: StructureSpawn) {
       if (renewResult == 0) {
         return;
       } else {
-        console.log("Erro renovando: " + renewResult);
         if (renewResult == ERR_FULL) {
           creep.memory.need_renew = false;
           continue;
-        } else break;
+        }
+        else if(renewResult == ERR_NOT_IN_RANGE)
+          continue;
+        else {
+          console.log("Erro renovando: " + renewResult);
+          break;
+        }
       }
     }
   }
