@@ -65,7 +65,7 @@ function storeEnergy(creep: Creep) {
       target = spawn;
     }
   }
-  console.log("[Harvester] Guardando energia em: " + target);
+  console.log("[Collector] Guardando energia em: " + target);
   if (workResult == ERR_NOT_IN_RANGE && target)
     creep.moveTo(target);
   if (workResult != ERR_NOT_ENOUGH_RESOURCES && workResult != ERR_FULL)

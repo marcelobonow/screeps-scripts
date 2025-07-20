@@ -7,6 +7,8 @@ export enum MoverStates {
   transferring = 2,
 }
 
+const minSpawnEnergy = 500;
+
 export function moverLoop(creep: Creep) {
   ///Se tiver cheio, procura a building mais proxima e manda para la
   ///Se estiver com alguma energia,
@@ -15,6 +17,7 @@ export function moverLoop(creep: Creep) {
   ///Se estiver sem energia nenhuma vai para o container mais próximo
 
   ///TODO: n fazer todo frame, só verificar nas mudanças
+  ///TODO: Fazer alguns movers repararem as coisas (estradas e coisas que decaem)
   const needRenew = (creep.ticksToLive ?? 0) < ticksToRenew;
   creep.memory.need_renew = needRenew;
 
@@ -75,11 +78,16 @@ function getNearestEnergySource(creep: Creep): EnergyProviderNullable {
 }
 
 function getNearestPlaceNeedingEnergy(creep: Creep): EnergyReceivableNullable {
-  ///Primeiro verifica se tem construção,
+  ///Primeiro verifica se spawn ta com pouca energia,
+  // se não, verifica se tem construção,
   ///Se não tiver construção precisando, envia para container
   ///Se todos containers estiverem cheios, envia para spawn
   ///Se spawn estiver cheio, mandar para fazer upgrade no controller
   ///TODO: usar sistema de prioridade, para poder enviar de um container para outro
+  let spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS, { filter: s => s.store.energy < minSpawnEnergy });
+  if (spawn)
+    return spawn;
+
   const nearestConstruction = creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
   if (nearestConstruction != null)
     return nearestConstruction;
@@ -90,7 +98,7 @@ function getNearestPlaceNeedingEnergy(creep: Creep): EnergyReceivableNullable {
     return closestExtension;
 
   ///TODO: lidar com mais de um spawn por room
-  const spawn = Object.values(Game.spawns)[0];
+  spawn = spawn ?? Object.values(Game.spawns)[0];
   if (spawn.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
     return spawn;
 

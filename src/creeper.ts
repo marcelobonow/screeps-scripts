@@ -14,7 +14,7 @@ export function creepLoop(creep: Creep) {
   ///TODO: pegar o spawn mais proximo;
   const spawn = Game.spawns["Spawn1"];
   if (creep.memory.need_renew && getSpawnEnergyAvailable(spawn) > MIN_ENERGY_TO_RENEW) {
-    console.log("creeper movendo para renovar");
+    console.log("creeper movendo para renovar: " + creep);
     creep.moveTo(spawn);
     return;
   }
@@ -47,13 +47,29 @@ function harvesterLoop(creep: Creep) {
 
 
 function getEnergy(creep: Creep) {
-  const target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
-  if (!target) {
-    creep.say("Não tem mais energia!");
-    return;
+  const closestContainer = creep.pos.findClosestByRange<StructureContainer>(FIND_STRUCTURES, {
+    filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0
+  });
+  let target;
+  let workResult;
+  if (closestContainer) {
+    target = closestContainer;
+    workResult = creep.withdraw(closestContainer, RESOURCE_ENERGY, Math.min(creep.store.getFreeCapacity(), closestContainer.store.energy));
   }
-  if (creep.harvest(target) == ERR_NOT_IN_RANGE)
+  else {
+    const closestSource = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+    if (!closestSource) {
+      creep.say("Não tem mais energia!");
+      return;
+    }
+    target = closestSource;
+    workResult = creep.harvest(closestSource);
+
+  }
+  if (workResult == ERR_NOT_IN_RANGE)
     creep.moveTo(target);
+  else
+    console.log("[Harvester] work result: " + workResult);
 }
 
 function sendEnergyBack(creep: Creep) {
