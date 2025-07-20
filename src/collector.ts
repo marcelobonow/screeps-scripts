@@ -6,10 +6,13 @@ export function collectorLoop(creep: Creep) {
     return;
   }
 
+  if(creep.memory.transferring && creep.store.energy == 0)
+    creep.memory.transferring = false;
+
   if (creep.memory.manual)
     return;
 
-  if (creep.store.getFreeCapacity() > 0) {
+  if (creep.store.getFreeCapacity() > 0 && !creep.memory.transferring) {
     getEnergy(creep);
   }
   else
@@ -33,17 +36,28 @@ function storeEnergy(creep: Creep) {
     filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0
   });
   let workResult;
-  let target: StructureContainer | StructureSpawn | null = closestContainer;
+  let target: { pos: RoomPosition } | null = closestContainer;
   if (closestContainer != null) {
     const transfer = Math.min(creep.store.energy, closestContainer.store.getFreeCapacity());
     workResult = creep.transfer(closestContainer, RESOURCE_ENERGY, transfer);
   }
+
   else {
-    const spawn = Game.spawns["Spawn1"];
-    const transfer = Math.min(creep.store.energy, spawn?.store?.getFreeCapacity() ?? 0);
-    workResult = creep.transfer(spawn, RESOURCE_ENERGY, transfer);
-    target = spawn;
+    ///TODO: Não colocar no lugar q precisa construir, remover daqui quando tiver mover.ts
+    const closestConstruction = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+    if (closestConstruction != null) {
+      workResult = creep.build(closestConstruction);
+      target = closestConstruction;
+    }
+    else {
+      const spawn = Game.spawns["Spawn1"];
+      const transfer = Math.min(creep.store.energy, spawn?.store?.getFreeCapacity() ?? 0);
+      workResult = creep.transfer(spawn, RESOURCE_ENERGY, transfer);
+      target = spawn;
+    }
   }
   if (workResult == ERR_NOT_IN_RANGE && target)
     creep.moveTo(target);
+  if (workResult != ERR_NOT_ENOUGH_RESOURCES && workResult != ERR_FULL)
+    creep.memory.transferring = true;
 }
