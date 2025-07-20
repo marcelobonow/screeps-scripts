@@ -1,12 +1,17 @@
-import { collectorMinEnergyInRoomToRenew } from "./constants";
+import { ticksToRenew } from "./creeper";
+import { getSpawnEnergyAvailable, MIN_ENERGY_TO_RENEW } from "./spawn";
 
 export function collectorLoop(creep: Creep) {
-  if (creep.memory.need_renew && creep.room.energyAvailable > collectorMinEnergyInRoomToRenew) {
-    creep.moveTo(Game.spawns["Spawn1"]);
+  const needRenew = (creep.ticksToLive ?? 0) < ticksToRenew;
+  creep.memory.need_renew = needRenew;
+
+  const spawn = Game.spawns["Spawn1"];
+  if (needRenew && getSpawnEnergyAvailable(spawn) > MIN_ENERGY_TO_RENEW) {
+    creep.moveTo(spawn);
     return;
   }
 
-  if(creep.memory.transferring && creep.store.energy == 0)
+  if (creep.memory.transferring && creep.store.energy == 0)
     creep.memory.transferring = false;
 
   if (creep.memory.manual)
@@ -27,17 +32,21 @@ function getEnergy(creep: Creep) {
     creep.say("sem source!");
     return;
   }
-  if (creep.harvest(source) == ERR_NOT_IN_RANGE)
+  const result = creep.harvest(source);
+  if (result == ERR_NOT_IN_RANGE)
     creep.moveTo(source);
+  else if (result != 0)
+    console.log("Harvest result: " + result);
 }
 
 function storeEnergy(creep: Creep) {
-  const closestContainer = creep.pos.findClosestByRange<StructureContainer>(FIND_STRUCTURES, {
-    filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store[RESOURCE_ENERGY] > 0
-  });
   let workResult;
-  let target: { pos: RoomPosition } | null = closestContainer;
+  let target: { pos: RoomPosition } | null;
+  const closestContainer = creep.pos.findClosestByRange<StructureContainer>(FIND_STRUCTURES, {
+    filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+  });
   if (closestContainer != null) {
+    target = closestContainer;
     const transfer = Math.min(creep.store.energy, closestContainer.store.getFreeCapacity());
     workResult = creep.transfer(closestContainer, RESOURCE_ENERGY, transfer);
   }
@@ -56,6 +65,7 @@ function storeEnergy(creep: Creep) {
       target = spawn;
     }
   }
+  console.log("[Harvester] Guardando energia em: " + target);
   if (workResult == ERR_NOT_IN_RANGE && target)
     creep.moveTo(target);
   if (workResult != ERR_NOT_ENOUGH_RESOURCES && workResult != ERR_FULL)

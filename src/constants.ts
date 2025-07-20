@@ -1,13 +1,11 @@
 export enum Roles {
   HARVESTER = 1,
   UPGRADER = 2,
-  COLLECTOR=3,
+  COLLECTOR = 3,
   MOVER = 4,
 }
 
 export const upgraderPrefix = "Upgrader";
 export const harvesterPrefix = "Harvester";
 export const collectorPrefix = "Collector";
-
-export const collectorMinEnergyInRoomToRenew=200;
-export const collectorTicksToRenew=200;
+export const moverPrefix = "Mover";

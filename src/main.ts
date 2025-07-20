@@ -17,8 +17,11 @@ declare global {
 
   interface CreepMemory {
     role: Roles;
-    need_renew:boolean;
+    need_renew: boolean;
     transferring: boolean;
+    ///TODO: salvar id somente
+    target_id: string | null;
+    state: number;
     manual: boolean;
   }
 
@@ -30,9 +33,13 @@ declare global {
     }
   }
 }
+export type EnergyReceivableNullable = EnergyReceivable | null;
+export type EnergyReceivable = Structure | ConstructionSite;
 
+export type EnergyProviderNullable = EnergyProvider | null;
+export type EnergyProvider = Structure | Source;
 
-console.log("Rodando versão: " ,__APP_VERSION__);
+console.log("Rodando versão: ", __APP_VERSION__);
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -43,9 +50,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
   //     delete Memory.creeps[name];
   //   }
   // }
-  for(const creep of Object.values(Game.creeps))
+  for (const creep of Object.values(Game.creeps))
     creepLoop(creep);
 
-  for(const spawn of Object.values(Game.spawns))
+  for (const spawn of Object.values(Game.spawns))
     spawnLoop(spawn);
 });

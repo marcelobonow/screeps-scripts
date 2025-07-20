@@ -6,13 +6,15 @@ export function getExtensionWithSpace(room: Room, minCapacity: number): Structur
   return null;
 }
 
-export function getExtensionEnergyInRoom(room: Room){
+export function getExtensionEnergyInRoom(room: Room) {
   let totalEnergy = 0;
-  for (const structure of room.find(FIND_STRUCTURES)) {
-    if (isExtension(structure) )
-      totalEnergy+= structure.store[RESOURCE_ENERGY];
-  }
+  const extensions = room.find<StructureExtension>(FIND_MY_STRUCTURES, {
+    filter: s => s.structureType == STRUCTURE_EXTENSION
+  });
 
+  for (const extension of extensions) {
+    totalEnergy += extension.store.energy;
+  }
   return totalEnergy;
 }
 
